@@ -113,17 +113,17 @@ ago! That is in &lt;a class="reference external" href="http://www.oldlinux.org/L
 routing and also touched on the configuration process. Next time we
 will dive into the implementation and see how it differs between IPv4
 and IPv6 routing subsystem in Linux.&lt;/p&gt;
-&lt;dl class="docutils"&gt;
-&lt;dt&gt;&lt;strong&gt;UPDATE 2017-06-27:&lt;/strong&gt;&lt;/dt&gt;
-&lt;dd&gt;&lt;ul class="first last simple"&gt;
+&lt;p&gt;&lt;em&gt;I would like to thank Phil Sutter for his detailed review and feedback
+on the post.&lt;/em&gt;&lt;/p&gt;
+&lt;div class="section" id="update-2017-06-27"&gt;
+&lt;h3&gt;UPDATE 2017-06-27&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;ul class="simple"&gt;
 &lt;li&gt;added &lt;cite&gt;History dive&lt;/cite&gt; section&lt;/li&gt;
 &lt;li&gt;fixed grammar &amp;amp; spelling mistakes&lt;/li&gt;
 &lt;li&gt;added &amp;quot;thank you&amp;quot; note&lt;/li&gt;
 &lt;/ul&gt;
-&lt;/dd&gt;
-&lt;/dl&gt;
-&lt;p&gt;&lt;em&gt;I would like to thank Phil Sutter for his detailed review and feedback
-on the post.&lt;/em&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
 &lt;p class="rubric"&gt;Footnotes&lt;/p&gt;
 &lt;table class="docutils footnote" frame="void" id="f1" rules="none"&gt;
 &lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
@@ -192,6 +192,7 @@ tcpdump -i mon0 -w netlink.pcap
 &lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id8"&gt;[8]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;See commit &lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=51ebd3181572af8d5076808dab2682d800f6da5d"&gt;51ebd3181572 &amp;quot;ipv6: add support of equal cost multipath (ECMP)&amp;quot;&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
+&lt;/div&gt;
 &lt;/div&gt;
 </content></entry><entry><title>Feeding packets to a VM with Scapy</title><link href="http://codecave.cc/feeding-packets-to-a-vm-with-scapy.html" rel="alternate"></link><published>2016-10-22T00:00:00+02:00</published><updated>2016-10-22T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2016-10-22:/feeding-packets-to-a-vm-with-scapy.html</id><summary type="html"></summary><content type="html">&lt;p&gt;Want to send hand crafted packets to a VM? &lt;a class="reference external" href="http://www.secdev.org/projects/scapy/doc/"&gt;Scapy&lt;/a&gt; can be used for
 that. It can sniff on a &lt;a class="reference external" href="https://en.wikipedia.org/wiki/TUN/TAP"&gt;TAP&lt;/a&gt; device, a virtual link between the host
