@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Jakub Sitnicki's blog</title><link href="http://codecave.cc/" rel="alternate"></link><link href="http://codecave.cc/feeds/all.atom.xml" rel="self"></link><id>http://codecave.cc/</id><updated>2017-06-24T00:00:00+02:00</updated><entry><title>Multipath Routing in Linux - part 1</title><link href="http://codecave.cc/multipath-routing-in-linux-part-1.html" rel="alternate"></link><published>2017-06-24T00:00:00+02:00</published><updated>2017-06-24T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2017-06-24:/multipath-routing-in-linux-part-1.html</id><summary type="html">&lt;p&gt;This blog post takes a look at the current state of Multipath Routing
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Jakub Sitnicki's blog</title><link href="http://codecave.cc/" rel="alternate"></link><link href="http://codecave.cc/feeds/all.atom.xml" rel="self"></link><id>http://codecave.cc/</id><updated>2017-06-24T00:00:00+02:00</updated><entry><title>Multipath Routing in Linux - part 1</title><link href="http://codecave.cc/multipath-routing-in-linux-part-1.html" rel="alternate"></link><published>2017-06-24T00:00:00+02:00</published><updated>2017-06-24T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2017-06-24:/multipath-routing-in-linux-part-1.html</id><summary type="html"></summary><content type="html">&lt;p&gt;This blog post takes a look at the current state of Multipath Routing
 mechanism, also known as Equal Cost Multipath Routing (ECMP), in the
-Linux v4.11 network stack.&lt;/p&gt;
-&lt;p&gt;With multipath routing you can distribute traffic destined to a single
-network over several paths (routes). It is an extension of …&lt;/p&gt;</summary><content type="html">&lt;p&gt;This blog post takes a look at the current state of Multipath Routing
-mechanism, also known as Equal Cost Multipath Routing (ECMP), in the
-Linux v4.11 network stack.&lt;/p&gt;
+Linux v4.11 network stack. If you're running a different kernel -
+don't worry. Jump to the &lt;a class="reference internal" href="#history-dive"&gt;History dive&lt;/a&gt; digression at the end to find
+out.&lt;/p&gt;
 &lt;p&gt;With multipath routing you can distribute traffic destined to a single
 network over several paths (routes). It is an extension of the concept
 of the conventional routing table, where there is just one
@@ -49,8 +47,8 @@ ip route add 1001::/64 \
 preference with weights &lt;a class="footnote-reference" href="#f3" id="id3"&gt;[3]&lt;/a&gt;, refer to the excellent &lt;a class="reference external" href="http://baturin.org/docs/iproute2/#Multipath%20routing"&gt;iproute2 cheat
 sheet&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Behind the scenes, when you create a multipath route, the &lt;tt class="docutils literal"&gt;ip&lt;/tt&gt;
-command uses a &lt;tt class="docutils literal"&gt;rtnetlink&lt;/tt&gt; &lt;a class="footnote-reference" href="#f4" id="id4"&gt;[4]&lt;/a&gt; socket to send a &lt;tt class="docutils literal"&gt;RTM_NEWROUTE&lt;/tt&gt;
-message to the kernel. This message contains a &lt;tt class="docutils literal"&gt;RTA_MULTIPATH&lt;/tt&gt;
+command uses a &lt;tt class="docutils literal"&gt;rtnetlink&lt;/tt&gt; &lt;a class="footnote-reference" href="#f4" id="id4"&gt;[4]&lt;/a&gt; socket to send an &lt;tt class="docutils literal"&gt;RTM_NEWROUTE&lt;/tt&gt;
+message to the kernel. This message contains an &lt;tt class="docutils literal"&gt;RTA_MULTIPATH&lt;/tt&gt;
 attribute &lt;a class="footnote-reference" href="#f5" id="id5"&gt;[5]&lt;/a&gt; which is an array of &lt;a class="reference external" href="http://elixir.free-electrons.com/linux/v4.11/source/include/uapi/linux/rtnetlink.h#L330"&gt;struct rtnexthop&lt;/a&gt; records,
 each one corresponding to one next hop:&lt;/p&gt;
 &lt;pre class="literal-block"&gt;
@@ -73,7 +71,7 @@ a multipath route specified with the &lt;tt class="docutils literal"&gt;RTA_MULT
 &lt;p&gt;This message is passed to the kernel space handler for
 &lt;tt class="docutils literal"&gt;RTM_NEWROUTE&lt;/tt&gt; messages (&lt;tt class="docutils literal"&gt;inet_rtm_newroute()&lt;/tt&gt; or
 &lt;tt class="docutils literal"&gt;inet6_rtm_newroute()&lt;/tt&gt;), where it is parsed, validated, and
-trasformed into an intermediate form (&lt;tt class="docutils literal"&gt;struct fib_config&lt;/tt&gt; or
+transformed into an intermediate form (&lt;tt class="docutils literal"&gt;struct fib_config&lt;/tt&gt; or
 &lt;tt class="docutils literal"&gt;struct fib6_config&lt;/tt&gt;). From it the actual routing table entry (or
 entries in case of IPv6 stack) is built and inserted into the routing
 table. These tasks translate into the following data flow through the
@@ -99,10 +97,33 @@ inet6_rtm_newroute()
     fib6_add()
     …
 &lt;/pre&gt;
+&lt;/div&gt;
+&lt;div class="section" id="history-dive"&gt;
+&lt;h2&gt;History dive&lt;/h2&gt;
+&lt;p&gt;Hash-based multipath routing (where we distribute flows of packets in
+contrast to individual packets) has been available in Linux kernel
+since v4.4 for IPv4 &lt;a class="footnote-reference" href="#f7" id="id7"&gt;[7]&lt;/a&gt; and since v3.8 for IPv6 &lt;a class="footnote-reference" href="#f8" id="id8"&gt;[8]&lt;/a&gt;. In this
+form, multipath routing has been also backported and is available in
+Red Hat Enterprise Linux 7.3 (RHEL kernel 3.10.0-345.el7 or newer).&lt;/p&gt;
+&lt;p&gt;While the &lt;strong&gt;first ever&lt;/strong&gt; support for multipath routing (IPv4 only),
+where individual packets were distributed among alternative paths in a
+random fashion, has been added to the Linux kernel almost 20 years
+ago! That is in &lt;a class="reference external" href="http://www.oldlinux.org/Linux.old/docs/history/2.1.html"&gt;v2.1.68&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;In this post we have looked at the potential use cases for multipath
-routing and also touched on the the configuration process. Next time
-we will dive into the implementation and see how it differs between
-IPv4 and IPv6 routing subsystem in Linux.&lt;/p&gt;
+routing and also touched on the configuration process. Next time we
+will dive into the implementation and see how it differs between IPv4
+and IPv6 routing subsystem in Linux.&lt;/p&gt;
+&lt;dl class="docutils"&gt;
+&lt;dt&gt;&lt;strong&gt;UPDATE 2017-06-27:&lt;/strong&gt;&lt;/dt&gt;
+&lt;dd&gt;&lt;ul class="first last simple"&gt;
+&lt;li&gt;added &lt;cite&gt;History dive&lt;/cite&gt; section&lt;/li&gt;
+&lt;li&gt;fixed grammar &amp;amp; spelling mistakes&lt;/li&gt;
+&lt;li&gt;added &amp;quot;thank you&amp;quot; note&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/dd&gt;
+&lt;/dl&gt;
+&lt;p&gt;&lt;em&gt;I would like to thank Phil Sutter for his detailed review and feedback
+on the post.&lt;/em&gt;&lt;/p&gt;
 &lt;p class="rubric"&gt;Footnotes&lt;/p&gt;
 &lt;table class="docutils footnote" frame="void" id="f1" rules="none"&gt;
 &lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
@@ -110,7 +131,7 @@ IPv4 and IPv6 routing subsystem in Linux.&lt;/p&gt;
 &lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id1"&gt;[1]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;&lt;p class="first"&gt;Actually each next hop, or multiple next hops in ECMP case,
 are associated with a &lt;tt class="docutils literal"&gt;(destination, cost/metric)&lt;/tt&gt;
 pair. There has even been a &lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=67e194007be08d071294456274dd53e0a04fdf90"&gt;recent fix&lt;/a&gt; in this area.&lt;/p&gt;
-&lt;p class="last"&gt;The route cost/metric can be optionally be specified with
+&lt;p class="last"&gt;The route cost/metric may optionally be specified with
 &lt;tt class="docutils literal"&gt;metric&lt;/tt&gt; keyword passed to the &lt;tt class="docutils literal"&gt;ip route&lt;/tt&gt; command. For an
 example see section on &lt;a class="reference external" href="http://baturin.org/docs/iproute2/#Routes%20with%20different%20metric"&gt;&amp;quot;Routes with different metric&amp;quot;&lt;/a&gt; in
 the &lt;em&gt;iproute2 cheat sheet&lt;/em&gt;. The kernel stores the metric
@@ -157,6 +178,18 @@ ip li set dev mon0 up
 tcpdump -i mon0 -w netlink.pcap
 &lt;/pre&gt;
 &lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="f7" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id7"&gt;[7]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;See commit &lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0e884c78ee19e902f300ed147083c28a0c6302f0"&gt;0e884c78ee19 &amp;quot;ipv4: L3 hash-based multipath&amp;quot;&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="f8" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id8"&gt;[8]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;See commit &lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=51ebd3181572af8d5076808dab2682d800f6da5d"&gt;51ebd3181572 &amp;quot;ipv6: add support of equal cost multipath (ECMP)&amp;quot;&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;/div&gt;
