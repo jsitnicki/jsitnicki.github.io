@@ -103,7 +103,7 @@ inet6_rtm_newroute()
 &lt;p&gt;Hash-based multipath routing (where we distribute flows of packets in
 contrast to individual packets) has been available in Linux kernel
 since v4.4 for IPv4 &lt;a class="footnote-reference" href="#f7" id="id7"&gt;[7]&lt;/a&gt; and since v3.8 for IPv6 &lt;a class="footnote-reference" href="#f8" id="id8"&gt;[8]&lt;/a&gt;. In this
-form, multipath routing has been also backported and is available in
+form multipath routing has been also backported and is available in
 Red Hat Enterprise Linux 7.3 (RHEL kernel 3.10.0-345.el7 or newer).&lt;/p&gt;
 &lt;p&gt;While the &lt;strong&gt;first ever&lt;/strong&gt; support for multipath routing (IPv4 only),
 where individual packets were distributed among alternative paths in a
