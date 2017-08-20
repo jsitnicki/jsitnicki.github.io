@@ -25,7 +25,7 @@ value used as a random number).&lt;/li&gt;
 &lt;li&gt;2012-Sep v3.6 IPv4 routing cache removed, which made Multipath
 Routing unusable with connection-oriented protocols like TCP as
 different next-hops could be selected for packets belonging to the
-same flow. See &lt;a class="reference external" href="https://serverfault.com/questions/696675/multipath-routing-in-post-3-6-kernels"&gt;discussion at ServerFault&lt;/a&gt;:&lt;/li&gt;
+same flow. See this &lt;a class="reference external" href="https://serverfault.com/questions/696675/multipath-routing-in-post-3-6-kernels"&gt;discussion at ServerFault&lt;/a&gt;.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;ul class="simple"&gt;
 &lt;li&gt;2013-Feb v3.8 Initial support for Multipath Routing for
@@ -303,11 +303,6 @@ the kernel.&lt;/td&gt;&lt;/tr&gt;
 network path it takes changes.&lt;/td&gt;&lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;!-- Links
-Understanding Linux Network Internals
-https://serverfault.com/questions/696675/multipath-routing-in-post-3-6-kernels
-https://serverfault.com/questions/276760/linux-multipath-routing-load-balance
-https://serverfault.com/questions/820269/how-to-achieve-per-packet-multipath-routing-on-linux --&gt;
 &lt;/div&gt;
 </content></entry><entry><title>Multipath Routing in Linux - part 1</title><link href="http://codecave.cc/multipath-routing-in-linux-part-1.html" rel="alternate"></link><published>2017-06-24T00:00:00+02:00</published><updated>2017-06-24T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2017-06-24:/multipath-routing-in-linux-part-1.html</id><summary type="html"></summary><content type="html">&lt;p&gt;This blog post takes a look at the current state of Multipath Routing
 mechanism, also known as Equal Cost Multipath Routing (ECMP), in the
