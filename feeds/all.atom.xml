@@ -1,5 +1,144 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Jakub Sitnicki's blog</title><link href="http://codecave.cc/" rel="alternate"></link><link href="http://codecave.cc/feeds/all.atom.xml" rel="self"></link><id>http://codecave.cc/</id><updated>2017-08-20T00:00:00+02:00</updated><entry><title>Multipath Routing in Linux - part 2</title><link href="http://codecave.cc/multipath-routing-in-linux-part-2.html" rel="alternate"></link><published>2017-08-20T00:00:00+02:00</published><updated>2017-08-20T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2017-08-20:/multipath-routing-in-linux-part-2.html</id><summary type="html"></summary><content type="html">&lt;p&gt;&lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-1.html"&gt;Last time&lt;/a&gt; we have looked at what is multipath routing, what are
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Jakub Sitnicki's blog</title><link href="http://codecave.cc/" rel="alternate"></link><link href="http://codecave.cc/feeds/all.atom.xml" rel="self"></link><id>http://codecave.cc/</id><updated>2018-04-14T00:00:00+02:00</updated><entry><title>Multipath Routing (ECMP) in Linux - part 3</title><link href="http://codecave.cc/multipath-routing-ecmp-in-linux-part-3.html" rel="alternate"></link><published>2018-04-14T00:00:00+02:00</published><updated>2018-04-14T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2018-04-14:/multipath-routing-ecmp-in-linux-part-3.html</id><summary type="html"></summary><content type="html">&lt;p&gt;In this post we will take a look at how ECMP routing can cause problems with TCP
+and what are some recent developments in multipath routing support in the Linux
+kernel.&lt;/p&gt;
+&lt;p&gt;This post concludes the 3 part series on multipath routing (ECMP) in Linux.
+Before diving into it you might want to read &lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-1.html"&gt;part 1&lt;/a&gt; and &lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html"&gt;part 2&lt;/a&gt; first.&lt;/p&gt;
+&lt;div class="section" id="routing-icmp-errors-with-the-flow-they-belong-to"&gt;
+&lt;h2&gt;Routing ICMP errors with the flow they belong to&lt;/h2&gt;
+&lt;p&gt;ICMP messages are important for diagnosing and troubleshooting problems with
+network setups using tools like &lt;tt class="docutils literal"&gt;ping&lt;/tt&gt; or &lt;tt class="docutils literal"&gt;traceroute&lt;/tt&gt;. They also enable the
+Path MTU Discovery (PMTUD) mechanism, where ICMP Packet Too Big (PTB) &lt;a class="footnote-reference" href="#f1" id="id1"&gt;[1]&lt;/a&gt;
+messages serve as a signal that an oversized IP datagram has been dropped. This
+feedback is used by TCP to adjust the Maximum Segment Size (MSS) so that the
+segments can get through without resorting to fragmentation.&lt;/p&gt;
+&lt;p&gt;In a setup where clients are talking to servers that are behind an ECMP router
+&lt;a class="footnote-reference" href="#f2" id="id2"&gt;[2]&lt;/a&gt; it is important that an ICMP PTB error message triggered by an oversized
+reply from the server gets routed back to the server that sent the
+reply. Otherwise, the ECMP router would be creating a so called &lt;a class="reference external" href="https://en.wikipedia.org/wiki/Path_MTU_Discovery#Problems"&gt;PMTUD black
+hole&lt;/a&gt; which causes TCP connections to hang. If the ICMP PTB error gets
+misrouted, the server that issued the reply doesn't learn that there was a
+problem with delivery, while the client never gets any response.&lt;/p&gt;
+&lt;div class="figure"&gt;
+&lt;object data="http://codecave.cc/figures/ecmp-icmp-routing.svg" type="image/svg+xml"&gt;
+&lt;/object&gt;
+&lt;p class="caption"&gt;Misrouting ICMPv6 errors creates a PMTU black hole.&lt;/p&gt;
+&lt;/div&gt;
+&lt;p&gt;This problem has been outlined in informational &lt;a class="reference external" href="https://tools.ietf.org/html/rfc7690"&gt;RFC 7690&lt;/a&gt; and in &lt;a class="reference external" href="https://blog.cloudflare.com/path-mtu-discovery-in-practice/"&gt;this blog
+post from CloudFlare&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Starting from Linux v4.4 (and RHEL 7.3, kernel-3.10.0-514.el7) ECMP routing for
+IPv4 &lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=79a131592dbb81a2dba208622a2ffbfc53f28bc0"&gt;supports anycast setups&lt;/a&gt;. The forwarding logic in the ipv4 stack looks at
+the ICMP error message (see &lt;a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/net/ipv4/route.c#L1786"&gt;ip_multipath_l3_keys()&lt;/a&gt;) and makes a routing
+decision based on the headers of the offending IP datagram that triggered the
+error, which is embedded in the ICMP message.&lt;/p&gt;
+&lt;p&gt;Until recently Linux ipv6 stack was lagging behind in this regard, and ICMP
+errors could have been misrouted when multipath routing was in use, thus
+creating the mentioned PMTU black hole.&lt;/p&gt;
+&lt;p&gt;This is no longer the case in Linux v4.14 and later, where ICMPv6 error messages
+get routed as expected. Similar to ipv4 stack, the ipv6 routing code does now
+consider the header fields of a packet carried as ICMPv6 error message payload
+to do the right thing (&lt;a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/net/ipv6/route.c#L1817"&gt;ip6_multipath_l3_keys()&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;However, this alone is not enough in case of IPv6. It is also needed for the
+endpoints (servers) behind the ECMP router to be configured to use IPv6 Flow
+Label reflection. This is because the Flow Label affects the path selection when
+ECMP is used. As proposed by &lt;a class="reference external" href="https://tools.ietf.org/html/rfc6438"&gt;RFC 6438&lt;/a&gt;, the Flow Label field is one of the
+header fields used as input to the multipath hash. Thanks to it the network
+flows between two hosts can be spread across multiple paths without inspecting
+L4 headers.&lt;/p&gt;
+&lt;p&gt;Under Linux, Flow Label reflection can be enabled per network namespace by
+setting a kernel parameter:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+sysctl -q -w net.ipv6.flowlabel_reflect=1
+&lt;/pre&gt;
+&lt;p&gt;Patches that enable ICMPv6 error routing with ECMP have been contributed by
+yours truly (Red Hat):&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=22b6722bfa591ba03d6a0c5521b600d4ab2d9a27"&gt;22b6722bfa59 ipv6: Add sysctl for per namespace flow label reflection&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=29825717123fb9cfb9e709327d565c2f2fa89903"&gt;29825717123f net: Extend struct flowi6 with multipath hash&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=23aebdacb05dab9efdf22b9e0413491cbd5f128f"&gt;23aebdacb05d ipv6: Compute multipath hash for ICMP errors from offending
+packet&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=956b45318a27cefa5e99fbbbe703ea8a2a3aee13"&gt;956b45318a27 ipv6: Fold rt6_info_hash_nhsfn() into its only caller&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b673d6cceae2b3e106addd27b79d321cc739bd43"&gt;b673d6cceae2 ipv6: Use multipath hash from flow info if available&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;
+&lt;div class="section" id="weighted-ecmp-with-ipv6"&gt;
+&lt;h2&gt;Weighted ECMP with IPv6&lt;/h2&gt;
+&lt;p&gt;With the release of the still fresh v4.16 Linux kernel, ipv6 stack has gained
+support for weighted ECMP routing (aka non-equal cost multipath routing). It is
+an upgrade since the last time we've taken a look at it in &lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#weighted-ecmp-promoting-selected-next-hops"&gt;part 2 of this
+series&lt;/a&gt;, which puts multipath routing support for IPv6 on par with IPv4.&lt;/p&gt;
+&lt;p&gt;The next-hop mapping algorithm has been switched from &lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n"&gt;Modulo-N&lt;/a&gt; to
+&lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n"&gt;Hash-Threshold&lt;/a&gt; thus making it possible to easily add support for next-hop
+weight by appropriately scaling the range of hash values that map to the hop.&lt;/p&gt;
+&lt;p&gt;From the code side, &lt;a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip6_fib.h#L130"&gt;rt6_info&lt;/a&gt; structure (which corresponds to &lt;a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip_fib.h#L106"&gt;fib_info&lt;/a&gt; in
+the ipv4 stack) has gained a &lt;a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip6_fib.h#L152"&gt;rt6i_nh_upper_bound&lt;/a&gt; field to track the per
+next-hop multipath hash value range size, while &lt;a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/net/ipv6/route.c#L453"&gt;rt6_multipath_select()&lt;/a&gt; has
+been updated to work with these ranges.&lt;/p&gt;
+&lt;p&gt;We can test it out with a simple 4-namespace setup that simulates a client
+issuing requests to a couple of web servers. Requests get spread between the
+servers by an ECMP router that sits in between in an amount directly
+proportional to the next-hop weight.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nv"&gt;NUM_REQUESTS&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;100&lt;/span&gt;
+&lt;span class="nv"&gt;SERVER1_WEIGHT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;
+&lt;span class="nv"&gt;SERVER2_WEIGHT&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;2&lt;/span&gt;
+
+ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; router ip -6 route add fc00::1/128 &lt;span class="se"&gt;\&lt;/span&gt;
+  nexthop via fd01::2 dev router-server1 weight &lt;span class="nv"&gt;$SERVER1_WEIGHT&lt;/span&gt; &lt;span class="se"&gt;\&lt;/span&gt;
+  nexthop via fd02::2 dev router-server2 weight &lt;span class="nv"&gt;$SERVER2_WEIGHT&lt;/span&gt;
+
+ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; server1 &lt;span class="se"&gt;\&lt;/span&gt;
+  socat -6 TCP-LISTEN:80,crlf,reuseaddr,fork SYSTEM:&lt;span class="s2"&gt;&amp;quot;echo server1&amp;quot;&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;
+ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; server2 &lt;span class="se"&gt;\&lt;/span&gt;
+  socat -6 TCP-LISTEN:80,crlf,reuseaddr,fork SYSTEM:&lt;span class="s2"&gt;&amp;quot;echo server2&amp;quot;&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;
+
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="o"&gt;((&lt;/span&gt;&lt;span class="nv"&gt;i&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="m"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; i &amp;lt; NUM_REQUESTS&lt;span class="p"&gt;;&lt;/span&gt; i++&lt;span class="o"&gt;))&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="k"&gt;do&lt;/span&gt;
+     ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; client curl -s &lt;span class="s1"&gt;&amp;#39;http://[fc00::1]&amp;#39;&lt;/span&gt;
+&lt;span class="k"&gt;done&lt;/span&gt; &lt;span class="p"&gt;|&lt;/span&gt; sort &lt;span class="p"&gt;|&lt;/span&gt; uniq -c
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;See &lt;a class="reference external" href="https://github.com/jsitnicki/tools/blob/5e04b5936f2ec84676988eb6e09f7c69afa9abce/net/tests/ecmp/weighted-ecmpv6.sh"&gt;weighted-ecmpv6.sh&lt;/a&gt; for a complete script that sets up and runs the test.
+The expected result here is that &lt;tt class="docutils literal"&gt;server2&lt;/tt&gt; responds to roughly twice as many
+requests as &lt;tt class="docutils literal"&gt;server1&lt;/tt&gt; on a v4.16 or newer kernel:&lt;/p&gt;
+&lt;pre class="literal-block"&gt;
+# uname -r
+4.16.0
+# ./weighted-ecmpv6.sh
+* Creating namespaces
+* Linking namespaces
+* Assigning addresses
+* Configuring routes
+* Bringing up HTTP servers
+* Testing request load balancing
+     36 server1
+     64 server2
+* Killing HTTP servers
+* Destroying namespaces
+#
+&lt;/pre&gt;
+&lt;p&gt;Patches for weighted ECMPv6 support have been contributed by Ido Schimmel
+(Mellanox):&lt;/p&gt;
+&lt;ol class="arabic simple"&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=d7dedee184e775f77d321cfa1c660a7680cf6588"&gt;d7dedee184e7 ipv6: Calculate hash thresholds for IPv6 nexthops&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=7696c06a189c0f1f4d0a7e49e28d10e1050ec529"&gt;7696c06a189c ipv6: Use a 31-bit multipath hash&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=3d709f69a3e749f4d1c195dab499df8ab66e25a8"&gt;3d709f69a3e7 ipv6: Use hash-threshold instead of modulo-N&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=398958ae48f44bb036d0fa9829cd489270bf1fc2"&gt;398958ae48f4 ipv6: Add support for non-equal-cost multipath&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p class="rubric"&gt;Footnotes&lt;/p&gt;
+&lt;table class="docutils footnote" frame="void" id="f1" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id1"&gt;[1]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Here the ICMP Packet Too Big refers collectively to ICMPv4 Destination
+Unreachable, Fragmentation Required message as well as to the ICMPv6
+Packet Too Big message.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;table class="docutils footnote" frame="void" id="f2" rules="none"&gt;
+&lt;colgroup&gt;&lt;col class="label" /&gt;&lt;col /&gt;&lt;/colgroup&gt;
+&lt;tbody valign="top"&gt;
+&lt;tr&gt;&lt;td class="label"&gt;&lt;a class="fn-backref" href="#id2"&gt;[2]&lt;/a&gt;&lt;/td&gt;&lt;td&gt;Sometimes referred to as anycast environments.&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+</content></entry><entry><title>Multipath Routing in Linux - part 2</title><link href="http://codecave.cc/multipath-routing-in-linux-part-2.html" rel="alternate"></link><published>2017-08-20T00:00:00+02:00</published><updated>2017-08-20T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2017-08-20:/multipath-routing-in-linux-part-2.html</id><summary type="html"></summary><content type="html">&lt;p&gt;&lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-1.html"&gt;Last time&lt;/a&gt; we have looked at what is multipath routing, what are
 some potential use-cases for it, and how to set it up. In this post we
 explore deeper the multipath routing implementation in the Linux
 network routing subsystem and focus on the logic behind distributing
@@ -88,7 +227,7 @@ possible hash values into adjacent ranges, each one corresponding to
 one of the available next-hops. The ipv6 stack, on the other hand,
 employs a somewhat simpler Modulo-N algorithm, which computes the
 next-hop index from the hash value by means of modulo division.&lt;/p&gt;
-&lt;div class="figure"&gt;
+&lt;div class="figure" id="hash-threshold-vs-modulo-n"&gt;
 &lt;object data="http://codecave.cc/figures/next-hop-algo.svg" type="image/svg+xml"&gt;
 &lt;/object&gt;
 &lt;p class="caption"&gt;Figure 1. Next-hop mapping with hash-threshold vs module-N algorithm&lt;/p&gt;

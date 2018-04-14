@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Jakub Sitnicki's blog</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="http://codecave.cc/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Jakub Sitnicki's blog Full Atom Feed" />
+
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans:regular,bold|Reenie+Beanie">
+    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/w3.css">
+    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/style.css">
+    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/jqcloud.css">
+    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/shariff.min.css">
+    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/pygments-highlight-github.css">
+
+    <!-- JavaScript -->
+     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+     <script src="http://codecave.cc/theme/js/jqcloud.min.js"></script>
+
+    <meta property="og:site_name" content="Jakub Sitnicki's blog">
+    <meta property="og:title" content="Multipath Routing (ECMP) in Linux - part 3 - Jakub Sitnicki's blog" />
+    <meta property="og:description" content="" />
+    <meta property="og:image" itemprop="image" content="http://codecave.cc">
+    <meta property="og:type" content="website" />
+</head>
+<body>
+  <div class="w3-row w3-card w3-white">
+    <header id=banner>
+       <!-- AUTHOR INITIALS-->
+      <a href="http://codecave.cc" id=logo title="Home">jkbs</a>
+      <nav id="menu">
+        <ul>
+        </ul>
+      </nav>
+    </header>
+  </div>
+<br>
+<article>
+  <header class="w3-container col-main">
+    <h1>Multipath Routing (ECMP) in Linux - part 3</h1>
+    <div class="post-info">
+      <div class="w3-opacity w3-margin-right w3-margin-bottom" style="flex-grow: 1;">
+        <span>Posted on <time datetime="2018-04-14T00:00:00+02:00">Sat 14 April 2018</time> in <i><a href="http://codecave.cc/category/blog.html" title="All articles in category Blog">Blog</a></i>
+        </span>
+      </div>
+    </div>
+  </header>
+  <br>
+  <div class="col-main w3-container">
+    <main id="article-content">
+      <p>In this post we will take a look at how ECMP routing can cause problems with TCP
+and what are some recent developments in multipath routing support in the Linux
+kernel.</p>
+<p>This post concludes the 3 part series on multipath routing (ECMP) in Linux.
+Before diving into it you might want to read <a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-1.html">part 1</a> and <a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html">part 2</a> first.</p>
+<div class="section" id="routing-icmp-errors-with-the-flow-they-belong-to">
+<h2>Routing ICMP errors with the flow they belong to</h2>
+<p>ICMP messages are important for diagnosing and troubleshooting problems with
+network setups using tools like <tt class="docutils literal">ping</tt> or <tt class="docutils literal">traceroute</tt>. They also enable the
+Path MTU Discovery (PMTUD) mechanism, where ICMP Packet Too Big (PTB) <a class="footnote-reference" href="#f1" id="id1">[1]</a>
+messages serve as a signal that an oversized IP datagram has been dropped. This
+feedback is used by TCP to adjust the Maximum Segment Size (MSS) so that the
+segments can get through without resorting to fragmentation.</p>
+<p>In a setup where clients are talking to servers that are behind an ECMP router
+<a class="footnote-reference" href="#f2" id="id2">[2]</a> it is important that an ICMP PTB error message triggered by an oversized
+reply from the server gets routed back to the server that sent the
+reply. Otherwise, the ECMP router would be creating a so called <a class="reference external" href="https://en.wikipedia.org/wiki/Path_MTU_Discovery#Problems">PMTUD black
+hole</a> which causes TCP connections to hang. If the ICMP PTB error gets
+misrouted, the server that issued the reply doesn't learn that there was a
+problem with delivery, while the client never gets any response.</p>
+<div class="figure">
+<object data="http://codecave.cc/figures/ecmp-icmp-routing.svg" type="image/svg+xml">
+</object>
+<p class="caption">Misrouting ICMPv6 errors creates a PMTU black hole.</p>
+</div>
+<p>This problem has been outlined in informational <a class="reference external" href="https://tools.ietf.org/html/rfc7690">RFC 7690</a> and in <a class="reference external" href="https://blog.cloudflare.com/path-mtu-discovery-in-practice/">this blog
+post from CloudFlare</a>.</p>
+<p>Starting from Linux v4.4 (and RHEL 7.3, kernel-3.10.0-514.el7) ECMP routing for
+IPv4 <a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=79a131592dbb81a2dba208622a2ffbfc53f28bc0">supports anycast setups</a>. The forwarding logic in the ipv4 stack looks at
+the ICMP error message (see <a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/net/ipv4/route.c#L1786">ip_multipath_l3_keys()</a>) and makes a routing
+decision based on the headers of the offending IP datagram that triggered the
+error, which is embedded in the ICMP message.</p>
+<p>Until recently Linux ipv6 stack was lagging behind in this regard, and ICMP
+errors could have been misrouted when multipath routing was in use, thus
+creating the mentioned PMTU black hole.</p>
+<p>This is no longer the case in Linux v4.14 and later, where ICMPv6 error messages
+get routed as expected. Similar to ipv4 stack, the ipv6 routing code does now
+consider the header fields of a packet carried as ICMPv6 error message payload
+to do the right thing (<a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/net/ipv6/route.c#L1817">ip6_multipath_l3_keys()</a>).</p>
+<p>However, this alone is not enough in case of IPv6. It is also needed for the
+endpoints (servers) behind the ECMP router to be configured to use IPv6 Flow
+Label reflection. This is because the Flow Label affects the path selection when
+ECMP is used. As proposed by <a class="reference external" href="https://tools.ietf.org/html/rfc6438">RFC 6438</a>, the Flow Label field is one of the
+header fields used as input to the multipath hash. Thanks to it the network
+flows between two hosts can be spread across multiple paths without inspecting
+L4 headers.</p>
+<p>Under Linux, Flow Label reflection can be enabled per network namespace by
+setting a kernel parameter:</p>
+<pre class="literal-block">
+sysctl -q -w net.ipv6.flowlabel_reflect=1
+</pre>
+<p>Patches that enable ICMPv6 error routing with ECMP have been contributed by
+yours truly (Red Hat):</p>
+<ol class="arabic simple">
+<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=22b6722bfa591ba03d6a0c5521b600d4ab2d9a27">22b6722bfa59 ipv6: Add sysctl for per namespace flow label reflection</a></li>
+<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=29825717123fb9cfb9e709327d565c2f2fa89903">29825717123f net: Extend struct flowi6 with multipath hash</a></li>
+<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=23aebdacb05dab9efdf22b9e0413491cbd5f128f">23aebdacb05d ipv6: Compute multipath hash for ICMP errors from offending
+packet</a></li>
+<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=956b45318a27cefa5e99fbbbe703ea8a2a3aee13">956b45318a27 ipv6: Fold rt6_info_hash_nhsfn() into its only caller</a></li>
+<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b673d6cceae2b3e106addd27b79d321cc739bd43">b673d6cceae2 ipv6: Use multipath hash from flow info if available</a></li>
+</ol>
+</div>
+<div class="section" id="weighted-ecmp-with-ipv6">
+<h2>Weighted ECMP with IPv6</h2>
+<p>With the release of the still fresh v4.16 Linux kernel, ipv6 stack has gained
+support for weighted ECMP routing (aka non-equal cost multipath routing). It is
+an upgrade since the last time we've taken a look at it in <a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#weighted-ecmp-promoting-selected-next-hops">part 2 of this
+series</a>, which puts multipath routing support for IPv6 on par with IPv4.</p>
+<p>The next-hop mapping algorithm has been switched from <a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n">Modulo-N</a> to
+<a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n">Hash-Threshold</a> thus making it possible to easily add support for next-hop
+weight by appropriately scaling the range of hash values that map to the hop.</p>
+<p>From the code side, <a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip6_fib.h#L130">rt6_info</a> structure (which corresponds to <a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip_fib.h#L106">fib_info</a> in
+the ipv4 stack) has gained a <a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip6_fib.h#L152">rt6i_nh_upper_bound</a> field to track the per
+next-hop multipath hash value range size, while <a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/net/ipv6/route.c#L453">rt6_multipath_select()</a> has
+been updated to work with these ranges.</p>
+<p>We can test it out with a simple 4-namespace setup that simulates a client
+issuing requests to a couple of web servers. Requests get spread between the
+servers by an ECMP router that sits in between in an amount directly
+proportional to the next-hop weight.</p>
+<div class="highlight"><pre><span></span><span class="nv">NUM_REQUESTS</span><span class="o">=</span><span class="m">100</span>
+<span class="nv">SERVER1_WEIGHT</span><span class="o">=</span><span class="m">1</span>
+<span class="nv">SERVER2_WEIGHT</span><span class="o">=</span><span class="m">2</span>
+
+ip netns <span class="nb">exec</span> router ip -6 route add fc00::1/128 <span class="se">\</span>
+  nexthop via fd01::2 dev router-server1 weight <span class="nv">$SERVER1_WEIGHT</span> <span class="se">\</span>
+  nexthop via fd02::2 dev router-server2 weight <span class="nv">$SERVER2_WEIGHT</span>
+
+ip netns <span class="nb">exec</span> server1 <span class="se">\</span>
+  socat -6 TCP-LISTEN:80,crlf,reuseaddr,fork SYSTEM:<span class="s2">&quot;echo server1&quot;</span> <span class="p">&amp;</span>
+ip netns <span class="nb">exec</span> server2 <span class="se">\</span>
+  socat -6 TCP-LISTEN:80,crlf,reuseaddr,fork SYSTEM:<span class="s2">&quot;echo server2&quot;</span> <span class="p">&amp;</span>
+
+<span class="k">for</span> <span class="o">((</span><span class="nv">i</span> <span class="o">=</span> <span class="m">0</span><span class="p">;</span> i &lt; NUM_REQUESTS<span class="p">;</span> i++<span class="o">))</span><span class="p">;</span> <span class="k">do</span>
+     ip netns <span class="nb">exec</span> client curl -s <span class="s1">&#39;http://[fc00::1]&#39;</span>
+<span class="k">done</span> <span class="p">|</span> sort <span class="p">|</span> uniq -c
+</pre></div>
+<p>See <a class="reference external" href="https://github.com/jsitnicki/tools/blob/5e04b5936f2ec84676988eb6e09f7c69afa9abce/net/tests/ecmp/weighted-ecmpv6.sh">weighted-ecmpv6.sh</a> for a complete script that sets up and runs the test.
+The expected result here is that <tt class="docutils literal">server2</tt> responds to roughly twice as many
+requests as <tt class="docutils literal">server1</tt> on a v4.16 or newer kernel:</p>
+<pre class="literal-block">
+# uname -r
+4.16.0
+# ./weighted-ecmpv6.sh
+* Creating namespaces
+* Linking namespaces
+* Assigning addresses
+* Configuring routes
+* Bringing up HTTP servers
+* Testing request load balancing
+     36 server1
+     64 server2
+* Killing HTTP servers
+* Destroying namespaces
+#
+</pre>
+<p>Patches for weighted ECMPv6 support have been contributed by Ido Schimmel
+(Mellanox):</p>
+<ol class="arabic simple">
+<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=d7dedee184e775f77d321cfa1c660a7680cf6588">d7dedee184e7 ipv6: Calculate hash thresholds for IPv6 nexthops</a></li>
+<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=7696c06a189c0f1f4d0a7e49e28d10e1050ec529">7696c06a189c ipv6: Use a 31-bit multipath hash</a></li>
+<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=3d709f69a3e749f4d1c195dab499df8ab66e25a8">3d709f69a3e7 ipv6: Use hash-threshold instead of modulo-N</a></li>
+<li><a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=398958ae48f44bb036d0fa9829cd489270bf1fc2">398958ae48f4 ipv6: Add support for non-equal-cost multipath</a></li>
+</ol>
+<p class="rubric">Footnotes</p>
+<table class="docutils footnote" frame="void" id="f1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>Here the ICMP Packet Too Big refers collectively to ICMPv4 Destination
+Unreachable, Fragmentation Required message as well as to the ICMPv6
+Packet Too Big message.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[2]</a></td><td>Sometimes referred to as anycast environments.</td></tr>
+</tbody>
+</table>
+</div>
+
+    </main>
+    <br>
+    <footer>
+      <div class="adjust-width">
+        <div id="author-block" class="w3-light-grey w3-border">
+            <img style="width: 35px; height: 56px; margin-left:50px;" src="http://codecave.cc/theme/images/bookmark-red.png" alt="bookmark"></img>
+            <div id="author-info">
+                <a href="http://codecave.cc/authors.html#jakub-sitnicki"><img style="width: 60px; height: 60px;" src="/authors/jakub-sitnicki.png" onerror="this.src='/theme/images/avatar.png'"></img>
+                </a>
+                <div style="margin-left: 20px; margin-top: 15px;">
+                    <a href="http://codecave.cc/authors.html#jakub-sitnicki"><span id="author-name" class="w3-hover-text-dark-grey">Jakub Sitnicki <jkbs@redhat.com></span></a>
+                    <p id="author-story" style="max-width: 500px;"></p>
+                </div>
+            </div>
+        </div>
+      </div>
+      <br>
+    </footer>
+  </div>
+</article>
+<br>
+<script src="http://codecave.cc/theme/js/shariff.min.js"></script>
+</body>
+</html>
