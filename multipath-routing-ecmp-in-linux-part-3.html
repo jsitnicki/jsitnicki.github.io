@@ -5,32 +5,32 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link href="http://codecave.cc/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Jakub Sitnicki's blog Full Atom Feed" />
+    <link href="/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Jakub Sitnicki's blog Full Atom Feed" />
 
     <!-- CSS -->
     <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans:regular,bold|Reenie+Beanie">
-    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/w3.css">
-    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/style.css">
-    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/jqcloud.css">
-    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/font-awesome.min.css">
-    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/shariff.min.css">
-    <link rel="stylesheet" type="text/css" href="http://codecave.cc/theme/css/pygments-highlight-github.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/w3.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/style.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/jqcloud.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/shariff.min.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/pygments-highlight-github.css">
 
     <!-- JavaScript -->
      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
-     <script src="http://codecave.cc/theme/js/jqcloud.min.js"></script>
+     <script src="/theme/js/jqcloud.min.js"></script>
 
     <meta property="og:site_name" content="Jakub Sitnicki's blog">
     <meta property="og:title" content="Multipath Routing (ECMP) in Linux - part 3 - Jakub Sitnicki's blog" />
     <meta property="og:description" content="" />
-    <meta property="og:image" itemprop="image" content="http://codecave.cc">
+    <meta property="og:image" itemprop="image" content="">
     <meta property="og:type" content="website" />
 </head>
 <body>
   <div class="w3-row w3-card w3-white">
     <header id=banner>
        <!-- AUTHOR INITIALS-->
-      <a href="http://codecave.cc" id=logo title="Home">jkbs</a>
+      <a href="" id=logo title="Home">jkbs</a>
       <nav id="menu">
         <ul>
         </ul>
@@ -43,7 +43,7 @@
     <h1>Multipath Routing (ECMP) in Linux - part 3</h1>
     <div class="post-info">
       <div class="w3-opacity w3-margin-right w3-margin-bottom" style="flex-grow: 1;">
-        <span>Posted on <time datetime="2018-04-14T00:00:00+02:00">Sat 14 April 2018</time> in <i><a href="http://codecave.cc/category/blog.html" title="All articles in category Blog">Blog</a></i>
+        <span>Posted on <time datetime="2018-04-18T00:00:00+02:00">Wed 18 April 2018</time> in <i><a href="/category/blog.html" title="All articles in category Blog">Blog</a></i>
         </span>
       </div>
     </div>
@@ -55,7 +55,7 @@
 and what are some recent developments in multipath routing support in the Linux
 kernel.</p>
 <p>This post concludes the 3 part series on multipath routing (ECMP) in Linux.
-Before diving into it you might want to read <a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-1.html">part 1</a> and <a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html">part 2</a> first.</p>
+Before diving into it you might want to read <a class="reference external" href="/multipath-routing-in-linux-part-1.html">part 1</a> and <a class="reference external" href="/multipath-routing-in-linux-part-2.html">part 2</a> first.</p>
 <div class="section" id="routing-icmp-errors-with-the-flow-they-belong-to">
 <h2>Routing ICMP errors with the flow they belong to</h2>
 <p>ICMP messages are important for diagnosing and troubleshooting problems with
@@ -72,7 +72,7 @@ hole</a> which causes TCP connections to hang. If the ICMP PTB error gets
 misrouted, the server that issued the reply doesn't learn that there was a
 problem with delivery, while the client never gets any response.</p>
 <div class="figure">
-<object data="http://codecave.cc/figures/ecmp-icmp-routing.svg" type="image/svg+xml">
+<object data="/figures/ecmp-icmp-routing.svg" type="image/svg+xml">
 </object>
 <p class="caption">Misrouting ICMPv6 errors creates a PMTU black hole.</p>
 </div>
@@ -117,10 +117,10 @@ packet</a></li>
 <h2>Weighted ECMP with IPv6</h2>
 <p>With the release of the still fresh v4.16 Linux kernel, ipv6 stack has gained
 support for weighted ECMP routing (aka non-equal cost multipath routing). It is
-an upgrade since the last time we've taken a look at it in <a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#weighted-ecmp-promoting-selected-next-hops">part 2 of this
+an upgrade since the last time we've taken a look at it in <a class="reference external" href="/multipath-routing-in-linux-part-2.html#weighted-ecmp-promoting-selected-next-hops">part 2 of this
 series</a>, which puts multipath routing support for IPv6 on par with IPv4.</p>
-<p>The next-hop mapping algorithm has been switched from <a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n">Modulo-N</a> to
-<a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n">Hash-Threshold</a> thus making it possible to easily add support for next-hop
+<p>The next-hop mapping algorithm has been switched from <a class="reference external" href="/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n">Modulo-N</a> to
+<a class="reference external" href="/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n">Hash-Threshold</a> thus making it possible to easily add support for next-hop
 weight by appropriately scaling the range of hash values that map to the hop.</p>
 <p>From the code side, <a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip6_fib.h#L130">rt6_info</a> structure (which corresponds to <a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip_fib.h#L106">fib_info</a> in
 the ipv4 stack) has gained a <a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip6_fib.h#L152">rt6i_nh_upper_bound</a> field to track the per
@@ -196,12 +196,12 @@ Packet Too Big message.</td></tr>
     <footer>
       <div class="adjust-width">
         <div id="author-block" class="w3-light-grey w3-border">
-            <img style="width: 35px; height: 56px; margin-left:50px;" src="http://codecave.cc/theme/images/bookmark-red.png" alt="bookmark"></img>
+            <img style="width: 35px; height: 56px; margin-left:50px;" src="/theme/images/bookmark-red.png" alt="bookmark"></img>
             <div id="author-info">
-                <a href="http://codecave.cc/authors.html#jakub-sitnicki"><img style="width: 60px; height: 60px;" src="/authors/jakub-sitnicki.png" onerror="this.src='/theme/images/avatar.png'"></img>
+                <a href="/authors.html#jakub-sitnicki"><img style="width: 60px; height: 60px;" src="/authors/jakub-sitnicki.png" onerror="this.src='/theme/images/avatar.png'"></img>
                 </a>
                 <div style="margin-left: 20px; margin-top: 15px;">
-                    <a href="http://codecave.cc/authors.html#jakub-sitnicki"><span id="author-name" class="w3-hover-text-dark-grey">Jakub Sitnicki <jkbs@redhat.com></span></a>
+                    <a href="/authors.html#jakub-sitnicki"><span id="author-name" class="w3-hover-text-dark-grey">Jakub Sitnicki <jkbs@redhat.com></span></a>
                     <p id="author-story" style="max-width: 500px;"></p>
                 </div>
             </div>
@@ -212,6 +212,6 @@ Packet Too Big message.</td></tr>
   </div>
 </article>
 <br>
-<script src="http://codecave.cc/theme/js/shariff.min.js"></script>
+<script src="/theme/js/shariff.min.js"></script>
 </body>
 </html>

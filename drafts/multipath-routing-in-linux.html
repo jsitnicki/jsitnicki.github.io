@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Jakub Sitnicki's blog</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Jakub Sitnicki's blog Full Atom Feed" />
+
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans:regular,bold|Reenie+Beanie">
+    <link rel="stylesheet" type="text/css" href="/theme/css/w3.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/style.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/jqcloud.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/shariff.min.css">
+    <link rel="stylesheet" type="text/css" href="/theme/css/pygments-highlight-github.css">
+
+    <!-- JavaScript -->
+     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+     <script src="/theme/js/jqcloud.min.js"></script>
+
+    <meta property="og:site_name" content="Jakub Sitnicki's blog">
+    <meta property="og:title" content="Multipath Routing in Linux - Jakub Sitnicki's blog" />
+    <meta property="og:description" content="<h1>Multipath Routing in Linux - part 1</h1>
+<blockquote>
+<p>NOTE: Intro needs to be reworked.</p>
+</blockquote>
+<p>In this blog post we will take a look at the current state of multipath routing
+mechanism, also known as equal cost multipath (ECMP) routing, in the Linux v4.11
+network stack. If you're running a different kernel …</p>" />
+    <meta property="og:image" itemprop="image" content="">
+    <meta property="og:type" content="website" />
+</head>
+<body>
+  <div class="w3-row w3-card w3-white">
+    <header id=banner>
+       <!-- AUTHOR INITIALS-->
+      <a href="" id=logo title="Home">jkbs</a>
+      <nav id="menu">
+        <ul>
+        </ul>
+      </nav>
+    </header>
+  </div>
+<br>
+<article>
+  <header class="w3-container col-main">
+    <h1>Multipath Routing in Linux</h1>
+    <div class="post-info">
+      <div class="w3-opacity w3-margin-right w3-margin-bottom" style="flex-grow: 1;">
+        <span>Posted on <time datetime="2018-05-28T00:00:00+02:00">Mon 28 May 2018</time> in <i><a href="/category/blog.html" title="All articles in category Blog">Blog</a></i>
+        </span>
+      </div>
+    </div>
+  </header>
+  <br>
+  <div class="col-main w3-container">
+    <main id="article-content">
+      <h1>Multipath Routing in Linux - part 1</h1>
+<blockquote>
+<p>NOTE: Intro needs to be reworked.</p>
+</blockquote>
+<p>In this blog post we will take a look at the current state of multipath routing
+mechanism, also known as equal cost multipath (ECMP) routing, in the Linux v4.11
+network stack. If you're running a different kernel - don't worry. Jump to the
+<code>History dive</code>_ digression at the end to find out.</p>
+<blockquote>
+<p>NOTE: v4.11?</p>
+</blockquote>
+<p>With multipath routing you can distribute traffic destined to a single network
+over several paths (routes). It is an extension of the concept of the
+conventional routing table, where there is just one network→next hop association
+(or network→interface association or both). Instead, as we will see soon, you
+can specify multiple next hops for one destination <sup id="fnref-1"><a class="footnote-ref" href="#fn-1">1</a></sup>.</p>
+<p>What are the use cases? Multipath routing can be used to statelessly
+load balance the flows at Layer 3 as described in <code>RFC 7690</code>_ and
+shown in the figure below.</p>
+<h2>Setting it up</h2>
+<h2>History dive</h2>
+<blockquote>
+<p>NOTE: History dive needs to be moved or merged.</p>
+</blockquote>
+<h1>Multipath Routing in Linux - part 2</h1>
+<h2>Two stacks, two stories</h2>
+<h2>The ECMP algorithm - mapping packets to next-hops</h2>
+<h2>Weighted ECMP - promoting selected next-hops</h2>
+<h2>Wrap up</h2>
+<h1>Multipath Routing (ECMP) in Linux - part 3</h1>
+<h2>Routing ICMP errors with the flow they belong to</h2>
+<h2>Weighted ECMP with IPv6</h2>
+<div class="footnote">
+<hr>
+<ol>
+<li id="fn-1">
+<p>Actually each next hop, or multiple next hops in ECMP case, are associated
+  with a <code>(destination, cost/metric)</code> pair. There has even been a <code>recent
+  fix</code><em> in this area. The route cost/metric may optionally be specified with
+  <code>metric</code> keyword passed to the <code>ip route</code> command. For an example see
+  section on <code>"Routes with different metric"</code></em> in the <em>iproute2 cheat
+  sheet</em>. The kernel stores the metric value in <code>fib_priority</code><em> field from
+  <code>struct fib_info</code> for IPv4 routes, and <code>rt6i_metric</code></em> field from
+  <code>struct rt6_info</code> for IPv6 routes.&#160;<a class="footnote-backref" href="#fnref-1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+    </main>
+    <br>
+    <footer>
+      <div class="adjust-width">
+        <div id="author-block" class="w3-light-grey w3-border">
+            <img style="width: 35px; height: 56px; margin-left:50px;" src="/theme/images/bookmark-red.png" alt="bookmark"></img>
+            <div id="author-info">
+                <a href="/authors.html#jakub-sitnicki"><img style="width: 60px; height: 60px;" src="/authors/jakub-sitnicki.png" onerror="this.src='/theme/images/avatar.png'"></img>
+                </a>
+                <div style="margin-left: 20px; margin-top: 15px;">
+                    <a href="/authors.html#jakub-sitnicki"><span id="author-name" class="w3-hover-text-dark-grey">Jakub Sitnicki</span></a>
+                    <p id="author-story" style="max-width: 500px;"></p>
+                </div>
+            </div>
+        </div>
+      </div>
+      <br>
+    </footer>
+  </div>
+</article>
+<br>
+<script src="/theme/js/shariff.min.js"></script>
+</body>
+</html>

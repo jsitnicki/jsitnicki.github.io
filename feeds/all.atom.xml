@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Jakub Sitnicki's blog</title><link href="http://codecave.cc/" rel="alternate"></link><link href="http://codecave.cc/feeds/all.atom.xml" rel="self"></link><id>http://codecave.cc/</id><updated>2018-04-14T00:00:00+02:00</updated><entry><title>Multipath Routing (ECMP) in Linux - part 3</title><link href="http://codecave.cc/multipath-routing-ecmp-in-linux-part-3.html" rel="alternate"></link><published>2018-04-14T00:00:00+02:00</published><updated>2018-04-14T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2018-04-14:/multipath-routing-ecmp-in-linux-part-3.html</id><summary type="html"></summary><content type="html">&lt;p&gt;In this post we will take a look at how ECMP routing can cause problems with TCP
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Jakub Sitnicki's blog</title><link href="/" rel="alternate"></link><link href="/feeds/all.atom.xml" rel="self"></link><id>/</id><updated>2018-04-18T00:00:00+02:00</updated><entry><title>Multipath Routing (ECMP) in Linux - part 3</title><link href="/multipath-routing-ecmp-in-linux-part-3.html" rel="alternate"></link><published>2018-04-18T00:00:00+02:00</published><updated>2018-04-18T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:None,2018-04-18:/multipath-routing-ecmp-in-linux-part-3.html</id><summary type="html"></summary><content type="html">&lt;p&gt;In this post we will take a look at how ECMP routing can cause problems with TCP
 and what are some recent developments in multipath routing support in the Linux
 kernel.&lt;/p&gt;
 &lt;p&gt;This post concludes the 3 part series on multipath routing (ECMP) in Linux.
-Before diving into it you might want to read &lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-1.html"&gt;part 1&lt;/a&gt; and &lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html"&gt;part 2&lt;/a&gt; first.&lt;/p&gt;
+Before diving into it you might want to read &lt;a class="reference external" href="/multipath-routing-in-linux-part-1.html"&gt;part 1&lt;/a&gt; and &lt;a class="reference external" href="/multipath-routing-in-linux-part-2.html"&gt;part 2&lt;/a&gt; first.&lt;/p&gt;
 &lt;div class="section" id="routing-icmp-errors-with-the-flow-they-belong-to"&gt;
 &lt;h2&gt;Routing ICMP errors with the flow they belong to&lt;/h2&gt;
 &lt;p&gt;ICMP messages are important for diagnosing and troubleshooting problems with
@@ -20,7 +20,7 @@ hole&lt;/a&gt; which causes TCP connections to hang. If the ICMP PTB error gets
 misrouted, the server that issued the reply doesn't learn that there was a
 problem with delivery, while the client never gets any response.&lt;/p&gt;
 &lt;div class="figure"&gt;
-&lt;object data="http://codecave.cc/figures/ecmp-icmp-routing.svg" type="image/svg+xml"&gt;
+&lt;object data="/figures/ecmp-icmp-routing.svg" type="image/svg+xml"&gt;
 &lt;/object&gt;
 &lt;p class="caption"&gt;Misrouting ICMPv6 errors creates a PMTU black hole.&lt;/p&gt;
 &lt;/div&gt;
@@ -65,10 +65,10 @@ packet&lt;/a&gt;&lt;/li&gt;
 &lt;h2&gt;Weighted ECMP with IPv6&lt;/h2&gt;
 &lt;p&gt;With the release of the still fresh v4.16 Linux kernel, ipv6 stack has gained
 support for weighted ECMP routing (aka non-equal cost multipath routing). It is
-an upgrade since the last time we've taken a look at it in &lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#weighted-ecmp-promoting-selected-next-hops"&gt;part 2 of this
+an upgrade since the last time we've taken a look at it in &lt;a class="reference external" href="/multipath-routing-in-linux-part-2.html#weighted-ecmp-promoting-selected-next-hops"&gt;part 2 of this
 series&lt;/a&gt;, which puts multipath routing support for IPv6 on par with IPv4.&lt;/p&gt;
-&lt;p&gt;The next-hop mapping algorithm has been switched from &lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n"&gt;Modulo-N&lt;/a&gt; to
-&lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n"&gt;Hash-Threshold&lt;/a&gt; thus making it possible to easily add support for next-hop
+&lt;p&gt;The next-hop mapping algorithm has been switched from &lt;a class="reference external" href="/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n"&gt;Modulo-N&lt;/a&gt; to
+&lt;a class="reference external" href="/multipath-routing-in-linux-part-2.html#hash-threshold-vs-modulo-n"&gt;Hash-Threshold&lt;/a&gt; thus making it possible to easily add support for next-hop
 weight by appropriately scaling the range of hash values that map to the hop.&lt;/p&gt;
 &lt;p&gt;From the code side, &lt;a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip6_fib.h#L130"&gt;rt6_info&lt;/a&gt; structure (which corresponds to &lt;a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip_fib.h#L106"&gt;fib_info&lt;/a&gt; in
 the ipv4 stack) has gained a &lt;a class="reference external" href="https://elixir.bootlin.com/linux/v4.16/source/include/net/ip6_fib.h#L152"&gt;rt6i_nh_upper_bound&lt;/a&gt; field to track the per
@@ -138,7 +138,7 @@ Packet Too Big message.&lt;/td&gt;&lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;/div&gt;
-</content></entry><entry><title>Multipath Routing in Linux - part 2</title><link href="http://codecave.cc/multipath-routing-in-linux-part-2.html" rel="alternate"></link><published>2017-08-20T00:00:00+02:00</published><updated>2017-08-20T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2017-08-20:/multipath-routing-in-linux-part-2.html</id><summary type="html"></summary><content type="html">&lt;p&gt;&lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-1.html"&gt;Last time&lt;/a&gt; we have looked at what is multipath routing, what are
+</content></entry><entry><title>Multipath Routing in Linux - part 2</title><link href="/multipath-routing-in-linux-part-2.html" rel="alternate"></link><published>2017-08-20T00:00:00+02:00</published><updated>2017-08-20T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:None,2017-08-20:/multipath-routing-in-linux-part-2.html</id><summary type="html"></summary><content type="html">&lt;p&gt;&lt;a class="reference external" href="/multipath-routing-in-linux-part-1.html"&gt;Last time&lt;/a&gt; we have looked at what is multipath routing, what are
 some potential use-cases for it, and how to set it up. In this post we
 explore deeper the multipath routing implementation in the Linux
 network routing subsystem and focus on the logic behind distributing
@@ -146,7 +146,7 @@ packet flows between alternative (equal cost) paths.&lt;/p&gt;
 &lt;div class="section" id="two-stacks-two-stories"&gt;
 &lt;h2&gt;Two stacks, two stories&lt;/h2&gt;
 &lt;p&gt;While you might expect that multipath routing in Linux works the same
-for IPv4 and IPv6, that is not the case. As we have seen in &lt;a class="reference external" href="http://codecave.cc/multipath-routing-in-linux-part-1.html#history-dive"&gt;&amp;quot;History
+for IPv4 and IPv6, that is not the case. As we have seen in &lt;a class="reference external" href="/multipath-routing-in-linux-part-1.html#history-dive"&gt;&amp;quot;History
 dive&amp;quot; in part 1&lt;/a&gt; support for ECMP (Equal-cost Multipath) routing in
 ipv4 and ipv6 stacks &lt;a class="footnote-reference" href="#f0" id="id1"&gt;[1]&lt;/a&gt; has been introduced at different times and
 by different developers. Hence the implementations differ and this
@@ -228,7 +228,7 @@ one of the available next-hops. The ipv6 stack, on the other hand,
 employs a somewhat simpler Modulo-N algorithm, which computes the
 next-hop index from the hash value by means of modulo division.&lt;/p&gt;
 &lt;div class="figure" id="hash-threshold-vs-modulo-n"&gt;
-&lt;object data="http://codecave.cc/figures/next-hop-algo.svg" type="image/svg+xml"&gt;
+&lt;object data="/figures/next-hop-algo.svg" type="image/svg+xml"&gt;
 &lt;/object&gt;
 &lt;p class="caption"&gt;Figure 1. Next-hop mapping with hash-threshold vs module-N algorithm&lt;/p&gt;
 &lt;/div&gt;
@@ -443,7 +443,7 @@ network path it takes changes.&lt;/td&gt;&lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;/div&gt;
-</content></entry><entry><title>Multipath Routing in Linux - part 1</title><link href="http://codecave.cc/multipath-routing-in-linux-part-1.html" rel="alternate"></link><published>2017-06-24T00:00:00+02:00</published><updated>2017-06-24T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2017-06-24:/multipath-routing-in-linux-part-1.html</id><summary type="html"></summary><content type="html">&lt;p&gt;This blog post takes a look at the current state of Multipath Routing
+</content></entry><entry><title>Multipath Routing in Linux - part 1</title><link href="/multipath-routing-in-linux-part-1.html" rel="alternate"></link><published>2017-06-24T00:00:00+02:00</published><updated>2017-06-24T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:None,2017-06-24:/multipath-routing-in-linux-part-1.html</id><summary type="html"></summary><content type="html">&lt;p&gt;This blog post takes a look at the current state of Multipath Routing
 mechanism, also known as Equal Cost Multipath Routing (ECMP), in the
 Linux v4.11 network stack. If you're running a different kernel -
 don't worry. Jump to the &lt;a class="reference internal" href="#history-dive"&gt;History dive&lt;/a&gt; digression at the end to find
@@ -458,14 +458,14 @@ hops for one destination &lt;a class="footnote-reference" href="#f1" id="id1"&gt
 load balance the flows at Layer 3 as described in &lt;a class="reference external" href="https://tools.ietf.org/html/rfc7690"&gt;RFC 7690&lt;/a&gt; and
 shown in the figure below.&lt;/p&gt;
 &lt;div class="figure"&gt;
-&lt;object data="http://codecave.cc/figures/ecmp-load-balance.svg" type="image/svg+xml"&gt;
+&lt;object data="/figures/ecmp-load-balance.svg" type="image/svg+xml"&gt;
 &lt;/object&gt;
 &lt;p class="caption"&gt;Figure 1. Stateless load balancing of TCP/UDP flows with multipath routing (ECMP) using anycast scheme (&lt;a class="reference external" href="https://tools.ietf.org/html/rfc7690"&gt;RFC 7690&lt;/a&gt;)&lt;/p&gt;
 &lt;/div&gt;
 &lt;p&gt;Or it could provide improved resiliency to failure by having redundant
 routes to the end hosts as pictured below.&lt;/p&gt;
 &lt;div class="figure"&gt;
-&lt;object data="http://codecave.cc/figures/ecmp-redundancy.svg" type="image/svg+xml"&gt;
+&lt;object data="/figures/ecmp-redundancy.svg" type="image/svg+xml"&gt;
 &lt;/object&gt;
 &lt;p class="caption"&gt;Figure 2. Redundant routes to the destination using multipath
 routing (ECMP) (&lt;a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=a6db4494d218c2e559173661ee972e048dc04fdd"&gt;commit a6db4494d218 &amp;quot;net: ipv4: Consider failed
@@ -507,7 +507,7 @@ struct rtnexthop {
 example above with an accompanying hex dump as it gets generated by
 the &lt;tt class="docutils literal"&gt;ip route&lt;/tt&gt; command &lt;a class="footnote-reference" href="#f6" id="id6"&gt;[6]&lt;/a&gt;:&lt;/p&gt;
 &lt;div class="figure"&gt;
-&lt;object data="http://codecave.cc/figures/rta_multipath.svg" type="image/svg+xml"&gt;
+&lt;object data="/figures/rta_multipath.svg" type="image/svg+xml"&gt;
 &lt;/object&gt;
 &lt;p class="caption"&gt;Figure 3. Layout of a sample &lt;tt class="docutils literal"&gt;RTM_NEWROUTE&lt;/tt&gt; message for creating
 a multipath route specified with the &lt;tt class="docutils literal"&gt;RTA_MULTIPATH&lt;/tt&gt; attribute.&lt;/p&gt;
@@ -638,7 +638,7 @@ tcpdump -i mon0 -w netlink.pcap
 &lt;/table&gt;
 &lt;/div&gt;
 &lt;/div&gt;
-</content></entry><entry><title>Feeding packets to a VM with Scapy</title><link href="http://codecave.cc/feeding-packets-to-a-vm-with-scapy.html" rel="alternate"></link><published>2016-10-22T00:00:00+02:00</published><updated>2016-10-22T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:codecave.cc,2016-10-22:/feeding-packets-to-a-vm-with-scapy.html</id><summary type="html"></summary><content type="html">&lt;p&gt;Want to send hand crafted packets to a VM? &lt;a class="reference external" href="http://www.secdev.org/projects/scapy/doc/"&gt;Scapy&lt;/a&gt; can be used for
+</content></entry><entry><title>Feeding packets to a VM with Scapy</title><link href="/feeding-packets-to-a-vm-with-scapy.html" rel="alternate"></link><published>2016-10-22T00:00:00+02:00</published><updated>2016-10-22T00:00:00+02:00</updated><author><name>Jakub Sitnicki &lt;jkbs@redhat.com&gt;</name></author><id>tag:None,2016-10-22:/feeding-packets-to-a-vm-with-scapy.html</id><summary type="html"></summary><content type="html">&lt;p&gt;Want to send hand crafted packets to a VM? &lt;a class="reference external" href="http://www.secdev.org/projects/scapy/doc/"&gt;Scapy&lt;/a&gt; can be used for
 that. It can sniff on a &lt;a class="reference external" href="https://en.wikipedia.org/wiki/TUN/TAP"&gt;TAP&lt;/a&gt; device, a virtual link between the host
 and the VM, and send packets in reaction to what it sees coming from
 the VM.&lt;/p&gt;
